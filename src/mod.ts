@@ -1,4 +1,4 @@
-import { Cookie, getCookies, setCookie } from '@std/http/cookie';
+import { Cookie, deleteCookie, getCookies, setCookie } from '@std/http/cookie';
 import { createToken } from '@/uuid.ts';
 
 /** Fresh-ish Context */
