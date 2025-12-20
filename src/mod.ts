@@ -1,4 +1,5 @@
 import { Cookie, deleteCookie, getCookies, setCookie } from '@std/http/cookie';
+import * as jose from '@panva/jose';
 import { createToken } from '@/uuid.ts';
 
 /** Fresh-ish Context */
@@ -17,6 +18,8 @@ export interface AuthOptions {
 	cookieMaxAge?: number;
 	/** Cookie options */
 	cookieOpts?: Omit<Cookie, 'name' | 'value' | 'maxAge'>;
+	/** JWT Secret */
+	jwtSecret?: Uint8Array;
 }
 
 export type Middleware<S> = (ctx: Context<S>) => Promise<Response>;
@@ -42,6 +45,7 @@ export function authMiddleware<S = never>(
 		cookieSession = 'auth:cookie',
 		cookieMaxAge = 36_000,
 		cookieOpts = {},
+		jwtSecret,
 	} = opts;
 
 	const getCookieKey = (token: string): string => {
@@ -68,6 +72,34 @@ export function authMiddleware<S = never>(
 		return token;
 	}
 
+	const readJwt = async (
+		token: string,
+		jwtOptions?: jose.JWTVerifyOptions,
+	): Promise<
+		jose.JWTPayload & { sub: string; jti: string; iat: number; exp: number }
+	> => {
+		if (!jwtSecret) throw new Error('Invalid secret');
+
+		const { payload } = await jose.jwtVerify(token, jwtSecret, {
+			currentDate: new Date(),
+			...jwtOptions,
+		});
+		const { sub, iat, exp } = payload;
+
+		if (!sub || !iat || !exp) {
+			throw new Error('Invalid JWT');
+		}
+
+		return { ...payload, sub, iat, exp };
+	};
+
+	const readHeaderBearer = (headers: Headers): string | undefined => {
+		const authHeader = headers.get('authorization') || '';
+		const [type, token] = authHeader?.split(' ');
+		if (type !== 'bearer') return undefined;
+		return token || undefined;
+	};
+
 	return (async (ctx: Context<S>) => {
 		const { req } = ctx;
 		const { headers, url } = req;
@@ -83,7 +115,13 @@ export function authMiddleware<S = never>(
 			currentCookie = undefined;
 		}
 
-		// TODO jwts
+		// Process Header
+		const headerToken = readHeaderBearer(headers);
+		const headerState = await readJwt(headerToken || '').catch(() => undefined);
+		if (headerState) {
+			await callback('header', headerState, ctx);
+		}
+
 		// TODO search
 
 		// Do request
