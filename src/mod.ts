@@ -78,7 +78,8 @@ export function authMiddleware<S = never>(
 		const cookieState = getCookieStore(currentCookie);
 		if (cookieState) {
 			await callback('cookie', cookieState, ctx);
-		} else {
+		} else if (currentCookie) {
+			deleteCookie(headers, currentCookie);
 			currentCookie = undefined;
 		}
 
