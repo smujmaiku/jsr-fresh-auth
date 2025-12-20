@@ -2,7 +2,7 @@ import { Cookie, getCookies, setCookie } from '@std/http/cookie';
 import { createToken } from '@/uuid.ts';
 
 /** Fresh-ish Context */
-export interface Context<S = never> {
+export interface Context<S> {
 	req: Request;
 	state: S;
 	next: () => Promise<Response> | Response;
@@ -19,7 +19,7 @@ export interface AuthOptions {
 	cookieOpts?: Cookie;
 }
 
-export type Middleware = (ctx: Context) => Promise<Response>;
+export type Middleware<S> = (ctx: Context<S>) => Promise<Response>;
 
 export type AuthType = 'cookie' | 'header' | 'search';
 
@@ -27,16 +27,16 @@ export type AuthCallback<S> = (
 	type: AuthType,
 	data: unknown,
 	ctx: Context<S>,
-) => Promise<void>;
+) => Promise<void> | void;
 
-export type UpdateCallback<S> = (ctx: Context<S>) => Promise<unknown>;
+export type UpdateCallback<S> = (ctx: Context<S>) => Promise<unknown> | unknown;
 
 /** Authentication middleware */
 export function authMiddleware<S = never>(
 	opts: AuthOptions,
 	callback: AuthCallback<S>,
 	updateCallback: UpdateCallback<S>,
-): Middleware {
+): Middleware<S> {
 	const {
 		cookieName = 'auth',
 		cookieSession = 'auth:cookie',
@@ -48,7 +48,7 @@ export function authMiddleware<S = never>(
 		return `${cookieSession}:${token}`;
 	};
 
-	const getCookieStore = <S = never>(token: string): S | undefined => {
+	const getCookieStore = (token: string): S | undefined => {
 		try {
 			return JSON.parse(
 				sessionStorage.getItem(getCookieKey(token))!,
@@ -68,7 +68,7 @@ export function authMiddleware<S = never>(
 		return token;
 	}
 
-	return (async (ctx: Context) => {
+	return (async (ctx: Context<S>) => {
 		const { req } = ctx;
 		const { headers, url } = req;
 		const { hostname } = new URL(url);
