@@ -76,7 +76,7 @@ export function authMiddleware<S = never>(
 		token: string,
 		jwtOptions?: jose.JWTVerifyOptions,
 	): Promise<
-		jose.JWTPayload & { sub: string; jti: string; iat: number; exp: number }
+		jose.JWTPayload & { sub: string; iat: number; exp: number }
 	> => {
 		if (!jwtSecret) throw new Error('Invalid secret');
 
