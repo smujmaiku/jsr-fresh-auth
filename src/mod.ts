@@ -16,7 +16,7 @@ export interface AuthOptions {
 	/** Cookie max age in seconds */
 	cookieMaxAge?: number;
 	/** Cookie options */
-	cookieOpts?: Cookie;
+	cookieOpts?: Omit<Cookie, 'name' | 'value' | 'maxAge'>;
 }
 
 export type Middleware<S> = (ctx: Context<S>) => Promise<Response>;
@@ -74,10 +74,12 @@ export function authMiddleware<S = never>(
 		const { hostname } = new URL(url);
 
 		// Process Cookie
-		const currentCookie = getCookies(headers)[cookieName];
+		let currentCookie: string | undefined = getCookies(headers)[cookieName];
 		const cookieState = getCookieStore(currentCookie);
 		if (cookieState) {
 			await callback('cookie', cookieState, ctx);
+		} else {
+			currentCookie = undefined;
 		}
 
 		// TODO jwts
@@ -86,18 +88,15 @@ export function authMiddleware<S = never>(
 		// Do request
 		const res = await ctx.next();
 
-		// Setup possible new cookie
-		const newCookie = currentCookie ? undefined : createCookieStore();
-		const cookie = currentCookie ?? newCookie;
-
 		// Get state to store
-		const state = !cookie ? undefined : await updateCallback(ctx);
+		const state = await updateCallback(ctx);
 
 		// Set browser cookie
-		if (state && newCookie) {
+		if (state && !currentCookie) {
+			currentCookie = createCookieStore();
 			setCookie(res.headers, {
 				name: cookieName,
-				value: newCookie,
+				value: currentCookie,
 				maxAge: cookieMaxAge,
 				sameSite: 'Lax',
 				domain: hostname,
@@ -105,15 +104,17 @@ export function authMiddleware<S = never>(
 				secure: true,
 				...cookieOpts,
 			});
-			// delete cookie storage
 		}
 
 		// Store or remove cookie state
-		if (cookie) {
+		if (currentCookie) {
 			if (state) {
-				sessionStorage.setItem(getCookieKey(cookie), JSON.stringify(state));
+				sessionStorage.setItem(
+					getCookieKey(currentCookie),
+					JSON.stringify(state),
+				);
 			} else {
-				sessionStorage.removeItem(getCookieKey(cookie));
+				sessionStorage.removeItem(getCookieKey(currentCookie));
 			}
 		}
 
