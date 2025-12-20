@@ -1,0 +1,20 @@
+{
+	"name": "@smujdev/fresh-auth",
+	"version": "0.1.0",
+	"license": "MIT",
+	"exports": "./src/mod.ts",
+	"publish": {
+		"include": [
+			"readme.md",
+			"src/**/*.ts"
+		]
+	},
+	"fmt": {
+		"singleQuote": true,
+		"useTabs": true
+	},
+	"imports": {
+		"@/": "./src/",
+		"@std/http": "jsr:@std/http@^1.0.22"
+	}
+}
