@@ -1,6 +1,6 @@
 import { Cookie, deleteCookie, getCookies, setCookie } from '@std/http/cookie';
-import * as jose from '@panva/jose';
-import { createToken } from '@/uuid.ts';
+import { readJwt } from './jwt.ts';
+import { createToken } from './uuid.ts';
 
 /** Fresh-ish Context */
 export interface Context<S> {
@@ -75,27 +75,6 @@ export function authMiddleware<S = never>(
 		return token;
 	}
 
-	const readJwt = async (
-		token: string,
-		jwtOptions?: jose.JWTVerifyOptions,
-	): Promise<
-		jose.JWTPayload & { sub: string; iat: number; exp: number }
-	> => {
-		if (!jwtSecret) throw new Error('Invalid secret');
-
-		const { payload } = await jose.jwtVerify(token, jwtSecret, {
-			currentDate: new Date(),
-			...jwtOptions,
-		});
-		const { sub, iat, exp } = payload;
-
-		if (!sub || !iat || !exp) {
-			throw new Error('Invalid JWT');
-		}
-
-		return { ...payload, sub, iat, exp };
-	};
-
 	const readHeaderBearer = (headers: Headers): string | undefined => {
 		const authHeader = headers.get('authorization') || '';
 		const [type, token] = authHeader?.split(' ');
@@ -128,18 +107,24 @@ export function authMiddleware<S = never>(
 			currentCookie = undefined;
 		}
 
-		// Process Header
-		const headerToken = readHeaderBearer(headers);
-		const headerState = await readJwt(headerToken || '').catch(() => undefined);
-		if (headerState) {
-			await callback('header', headerState, ctx);
-		}
+		if (jwtSecret) {
+			// Process Header
+			const headerToken = readHeaderBearer(headers);
+			const headerState = await readJwt(headerToken || '', jwtSecret).catch(
+				() => undefined,
+			);
+			if (headerState) {
+				await callback('header', headerState, ctx);
+			}
 
-		// Process URL Search
-		const searchToken = readUrlSearch(url);
-		const searchState = await readJwt(searchToken || '').catch(() => undefined);
-		if (searchState) {
-			await callback('urlSearch', searchState, ctx);
+			// Process URL Search
+			const searchToken = readUrlSearch(url);
+			const searchState = await readJwt(searchToken || '', jwtSecret).catch(
+				() => undefined,
+			);
+			if (searchState) {
+				await callback('urlSearch', searchState, ctx);
+			}
 		}
 
 		// Do request
