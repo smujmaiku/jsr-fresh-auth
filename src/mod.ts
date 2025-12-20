@@ -20,11 +20,13 @@ export interface AuthOptions {
 	cookieOpts?: Omit<Cookie, 'name' | 'value' | 'maxAge'>;
 	/** JWT Secret */
 	jwtSecret?: Uint8Array;
+	/** URL Search key */
+	urlSearchName?: string;
 }
 
 export type Middleware<S> = (ctx: Context<S>) => Promise<Response>;
 
-export type AuthType = 'cookie' | 'header' | 'search';
+export type AuthType = 'cookie' | 'header' | 'urlSearch';
 
 export type AuthCallback<S> = (
 	type: AuthType,
@@ -46,6 +48,7 @@ export function authMiddleware<S = never>(
 		cookieMaxAge = 36_000,
 		cookieOpts = {},
 		jwtSecret,
+		urlSearchName,
 	} = opts;
 
 	const getCookieKey = (token: string): string => {
@@ -96,7 +99,17 @@ export function authMiddleware<S = never>(
 	const readHeaderBearer = (headers: Headers): string | undefined => {
 		const authHeader = headers.get('authorization') || '';
 		const [type, token] = authHeader?.split(' ');
+
 		if (type !== 'bearer') return undefined;
+		return token || undefined;
+	};
+
+	const readUrlSearch = (url: string): string | undefined => {
+		if (!urlSearchName) return undefined;
+
+		const { searchParams } = new URL(url);
+		const token = searchParams.get(urlSearchName);
+
 		return token || undefined;
 	};
 
@@ -122,7 +135,12 @@ export function authMiddleware<S = never>(
 			await callback('header', headerState, ctx);
 		}
 
-		// TODO search
+		// Process URL Search
+		const searchToken = readUrlSearch(url);
+		const searchState = await readJwt(searchToken || '').catch(() => undefined);
+		if (searchState) {
+			await callback('urlSearch', searchState, ctx);
+		}
 
 		// Do request
 		const res = await ctx.next();
