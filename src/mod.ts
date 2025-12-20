@@ -22,11 +22,13 @@ export interface AuthOptions {
 	jwtSecret?: Uint8Array;
 	/** URL Search key */
 	urlSearchName?: string;
+	/** WebSocket protocol prefix */
+	wsPrefix?: string;
 }
 
 export type Middleware<S> = (ctx: Context<S>) => Promise<Response>;
 
-export type AuthType = 'cookie' | 'header' | 'urlSearch';
+export type AuthType = 'cookie' | 'header' | 'urlSearch' | 'websocket';
 
 export type AuthCallback<S> = (
 	type: AuthType,
@@ -49,6 +51,7 @@ export function authMiddleware<S = never>(
 		cookieOpts = {},
 		jwtSecret,
 		urlSearchName,
+		wsPrefix,
 	} = opts;
 
 	const getCookieKey = (token: string): string => {
@@ -92,6 +95,20 @@ export function authMiddleware<S = never>(
 		return token || undefined;
 	};
 
+	const readWsProtocol = (headers: Headers): string | undefined => {
+		if (!wsPrefix) return;
+		undefined;
+
+		const allProto = headers.get('Sec-WebSocket-Protocol') || '';
+		const proto = allProto.split(',').map((v) => v.trim()).find((v) =>
+			v.startsWith(wsPrefix)
+		);
+		if (!proto) return undefined;
+
+		const token = proto.slice(wsPrefix.length);
+		return token || undefined;
+	};
+
 	return (async (ctx: Context<S>) => {
 		const { req } = ctx;
 		const { headers, url } = req;
@@ -108,7 +125,7 @@ export function authMiddleware<S = never>(
 		}
 
 		if (jwtSecret) {
-			// Process Header
+			// Process Authorization Header
 			const headerToken = readHeaderBearer(headers);
 			const headerState = await readJwt(headerToken || '', jwtSecret).catch(
 				() => undefined,
@@ -124,6 +141,15 @@ export function authMiddleware<S = never>(
 			);
 			if (searchState) {
 				await callback('urlSearch', searchState, ctx);
+			}
+
+			// Process Sec-WebSocket-Protocol
+			const wsToken = readWsProtocol(headers);
+			const wsState = await readJwt(wsToken || '', jwtSecret).catch(
+				() => undefined,
+			);
+			if (wsState) {
+				await callback('websocket', wsState, ctx);
 			}
 		}
 
