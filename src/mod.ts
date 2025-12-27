@@ -96,8 +96,8 @@ export function authMiddleware<S = never>(
 	};
 
 	const readWsProtocol = (headers: Headers): string | undefined => {
-		if (!wsPrefix) return;
-		undefined;
+		if (!wsPrefix) return undefined;
+		if (headers.get('Upgrade') !== 'websocket') return undefined;
 
 		const allProto = headers.get('Sec-WebSocket-Protocol') || '';
 		const proto = allProto.split(',').map((v) => v.trim()).find((v) =>
@@ -123,6 +123,8 @@ export function authMiddleware<S = never>(
 			deleteCookie(headers, currentCookie);
 			currentCookie = undefined;
 		}
+
+		let wsProtocolRes: string | undefined;
 
 		if (jwtSecret) {
 			// Process Authorization Header
@@ -150,11 +152,18 @@ export function authMiddleware<S = never>(
 			);
 			if (wsState) {
 				await callback('websocket', wsState, ctx);
+				wsProtocolRes = `${wsPrefix}${wsToken}`;
 			}
 		}
 
 		// Do request
 		const res = await ctx.next();
+
+		// Accept Sec-WebSocket-Protocol
+		const wsAccept = res.headers.get('Sec-Websocket-Accept');
+		if (wsAccept && wsProtocolRes) {
+			res.headers.set('Sec-WebSocket-Protocol', wsProtocolRes);
+		}
 
 		// Get state to store
 		const state = await updateCallback(ctx);
