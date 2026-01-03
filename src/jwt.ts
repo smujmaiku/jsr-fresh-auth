@@ -25,7 +25,7 @@ export async function signJwt(
 	payload: jose.JWTPayload,
 	jwtSecret: Uint8Array,
 	maxAge: number,
-) {
+): Promise<string> {
 	const now = Math.floor(Date.now() / 1000);
 
 	const token = await new jose.CompactSign(

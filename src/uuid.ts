@@ -1,8 +1,8 @@
 export const TIME_PAD = 7;
 export const INDEX_PAD = 5;
 
-const LASTTIME_KEY = 'authuuid:lastTime';
-const LASTINDEX_KEY = 'authuuid:lastIndex';
+const LASTTIME_KEY = 'smujdev/freshauth/lastTime';
+const LASTINDEX_KEY = 'smujdev/freshauth/lastIndex';
 
 /** Create the smaller uuid */
 export function createUuid(time: number, index: number): string {
