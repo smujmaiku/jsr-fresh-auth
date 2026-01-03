@@ -1,8 +1,12 @@
 {
 	"name": "@smujdev/fresh-auth",
-	"version": "0.2.3",
+	"version": "0.2.4",
 	"license": "MIT",
-	"exports": "./src/mod.ts",
+	"exports": {
+		"./jwt": "./src/jwt.ts",
+		"./uuid": "./src/uuid.ts",
+		".": "./src/mod.ts"
+	},
 	"publish": {
 		"include": [
 			"readme.md",
