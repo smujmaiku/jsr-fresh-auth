@@ -157,7 +157,10 @@ export function authMiddleware<S = never>(
 		}
 
 		// Do request
-		const res = await ctx.next();
+		const origRes = await ctx.next();
+
+		// Protect against Resonse.redirect locking headers
+		const res = new Response(await origRes.arrayBuffer(), origRes);
 
 		// Accept Sec-WebSocket-Protocol
 		const wsAccept = res.headers.get('Sec-Websocket-Accept');
