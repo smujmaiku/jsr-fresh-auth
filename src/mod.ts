@@ -178,6 +178,7 @@ export function authMiddleware<S = never>(
 				name: cookieName,
 				value: currentCookie,
 				maxAge: cookieMaxAge,
+				httpOnly: true,
 				sameSite: 'Lax',
 				domain: hostname,
 				path: '/',
