@@ -119,9 +119,6 @@ export function authMiddleware<S = never>(
 		const cookieState = getCookieStore(currentCookie);
 		if (cookieState) {
 			await callback('cookie', cookieState, ctx);
-		} else if (currentCookie) {
-			deleteCookie(headers, currentCookie);
-			currentCookie = undefined;
 		}
 
 		let wsProtocolRes: string | undefined;
@@ -185,6 +182,8 @@ export function authMiddleware<S = never>(
 				secure: true,
 				...cookieOpts,
 			});
+		} else if (!state && currentCookie) {
+			deleteCookie(res.headers, cookieName);
 		}
 
 		// Store or remove cookie state
