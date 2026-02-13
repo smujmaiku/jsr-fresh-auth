@@ -2,6 +2,7 @@
   "version": "5",
   "specifiers": {
     "jsr:@panva/jose@^6.1.3": "6.1.3",
+    "jsr:@smujdev/ttl-store@~0.1.1": "0.1.1",
     "jsr:@std/assert@^1.0.14": "1.0.16",
     "jsr:@std/assert@^1.0.15": "1.0.16",
     "jsr:@std/async@^1.0.15": "1.0.16",
@@ -26,6 +27,9 @@
   "jsr": {
     "@panva/jose@6.1.3": {
       "integrity": "a3b527af606c15601e27a70bacfbb215b91998b50ca4360eab7ec0e48cb3371c"
+    },
+    "@smujdev/ttl-store@0.1.1": {
+      "integrity": "631a5d56cd9d36dcb9987ea8b9b5e6c52d298d7de60060fe11873885ebbdc9f1"
     },
     "@std/assert@1.0.16": {
       "integrity": "6a7272ed1eaa77defe76e5ff63ca705d9c495077e2d5fd0126d2b53fc5bd6532",
@@ -111,6 +115,7 @@
   "workspace": {
     "dependencies": [
       "jsr:@panva/jose@^6.1.3",
+      "jsr:@smujdev/ttl-store@~0.1.1",
       "jsr:@std/expect@^1.0.17",
       "jsr:@std/http@^1.0.22",
       "jsr:@std/testing@^1.0.16"

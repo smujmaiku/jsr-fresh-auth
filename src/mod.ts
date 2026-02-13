@@ -1,4 +1,5 @@
 import { Cookie, deleteCookie, getCookies, setCookie } from '@std/http/cookie';
+import TTLStore from '@smujdev/ttl-store';
 import { readJwt } from './jwt.ts';
 import { createToken } from './uuid.ts';
 
@@ -12,12 +13,14 @@ export interface Context<S> {
 export interface AuthOptions {
 	/** Cookie name */
 	cookieName?: string;
-	/** Cookie sessionStorage name */
-	cookieSession?: string;
 	/** Cookie max age in seconds */
 	cookieMaxAge?: number;
 	/** Cookie options */
 	cookieOpts?: Omit<Cookie, 'name' | 'value' | 'maxAge'>;
+	/** Storage for session data */
+	store?: Storage;
+	/** Storage key */
+	storeKey?: string;
 	/** JWT Secret */
 	jwtSecret?: Uint8Array;
 	/** URL Search key */
@@ -46,37 +49,16 @@ export function authMiddleware<S = never>(
 ): Middleware<S> {
 	const {
 		cookieName = 'auth',
-		cookieSession = 'auth:cookie',
 		cookieMaxAge = 36_000,
 		cookieOpts = {},
+		store = localStorage,
+		storeKey = 'auth',
 		jwtSecret,
 		urlSearchName,
 		wsPrefix,
 	} = opts;
 
-	const getCookieKey = (token: string): string => {
-		return `${cookieSession}:${token}`;
-	};
-
-	const getCookieStore = (token: string): S | undefined => {
-		try {
-			return JSON.parse(
-				sessionStorage.getItem(getCookieKey(token))!,
-			) as S;
-		} catch (_e) {}
-
-		return undefined;
-	};
-
-	function createCookieStore(): string {
-		const token = createToken();
-
-		setTimeout(() => {
-			sessionStorage.removeItem(getCookieKey(token));
-		}, cookieMaxAge * 1_000);
-
-		return token;
-	}
+	const ttlStore = new TTLStore(storeKey, store);
 
 	const readHeaderBearer = (headers: Headers): string | undefined => {
 		const authHeader = headers.get('authorization') || '';
@@ -116,7 +98,7 @@ export function authMiddleware<S = never>(
 
 		// Process Cookie
 		let currentCookie: string | undefined = getCookies(headers)[cookieName];
-		const cookieState = getCookieStore(currentCookie);
+		const cookieState = ttlStore.getItem(currentCookie);
 		if (cookieState) {
 			await callback('cookie', cookieState, ctx);
 		}
@@ -171,7 +153,8 @@ export function authMiddleware<S = never>(
 
 		// Set browser cookie
 		if (state && !currentCookie) {
-			currentCookie = createCookieStore();
+			currentCookie = createToken();
+			ttlStore.setItem(currentCookie, null, cookieMaxAge);
 			setCookie(res.headers, {
 				name: cookieName,
 				value: currentCookie,
@@ -190,12 +173,9 @@ export function authMiddleware<S = never>(
 		// Store or remove cookie state
 		if (currentCookie) {
 			if (state) {
-				sessionStorage.setItem(
-					getCookieKey(currentCookie),
-					JSON.stringify(state),
-				);
+				ttlStore.updateItem(currentCookie, state);
 			} else {
-				sessionStorage.removeItem(getCookieKey(currentCookie));
+				ttlStore.removeItem(currentCookie);
 			}
 		}
 
