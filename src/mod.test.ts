@@ -14,7 +14,7 @@ describe('mod', () => {
 		const ctx: Context<{ sub: string }> = {
 			req: new Request('http://test.smuj.dev', {}),
 			state: { sub: 'mockSub' },
-			next: fn(() => res),
+			next: fn(() => res) as any,
 		};
 
 		const result = await freshAuth<{ sub: string }>(
@@ -40,7 +40,7 @@ describe('mod', () => {
 		const ctx: Context<{ sub: string }> = {
 			req: new Request('http://test.smuj.dev', {}),
 			state: { sub: 'mockSub' },
-			next: fn(() => res),
+			next: fn(() => res) as any,
 		};
 
 		const result = await freshAuth<{ sub: string }>(
