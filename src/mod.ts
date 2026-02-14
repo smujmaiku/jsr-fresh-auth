@@ -101,6 +101,8 @@ export function authMiddleware<S = never>(
 		const cookieState = ttlStore.getItem(currentCookie);
 		if (cookieState) {
 			await callback('cookie', cookieState, ctx);
+		} else {
+			currentCookie = undefined;
 		}
 
 		let wsProtocolRes: string | undefined;
