@@ -1,11 +1,11 @@
 {
 	"name": "@smujdev/fresh-auth",
-	"version": "0.3.1",
+	"version": "0.3.2",
 	"license": "MIT",
 	"exports": {
+		".": "./src/mod.ts",
 		"./jwt": "./src/jwt.ts",
-		"./uuid": "./src/uuid.ts",
-		".": "./src/mod.ts"
+		"./uuid": "./src/uuid.ts"
 	},
 	"publish": {
 		"include": [
