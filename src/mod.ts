@@ -10,6 +10,11 @@ export interface Context<S> {
 	next: () => Promise<Response> | Response;
 }
 
+export type StoreInterrupt = (
+	cookie: string | undefined,
+	ttlStore: TTLStore,
+) => void | Promise<void>;
+
 export interface AuthOptions {
 	/** Cookie name */
 	cookieName?: string;
@@ -21,6 +26,10 @@ export interface AuthOptions {
 	store?: Storage;
 	/** Storage key */
 	storeKey?: string;
+	/** Callback before store.get */
+	storeInterruptPre?: StoreInterrupt;
+	/** Callback after last store.set */
+	storeInterruptPost?: StoreInterrupt;
 	/** JWT Secret */
 	jwtSecret?: Uint8Array;
 	/** URL Search key */
@@ -53,6 +62,8 @@ export function authMiddleware<S = never>(
 		cookieOpts = {},
 		store = localStorage,
 		storeKey = 'auth',
+		storeInterruptPre,
+		storeInterruptPost,
 		jwtSecret,
 		urlSearchName,
 		wsPrefix,
@@ -96,8 +107,10 @@ export function authMiddleware<S = never>(
 		const { headers, url } = req;
 		const { hostname } = new URL(url);
 
-		// Process Cookie
 		let currentCookie: string | undefined = getCookies(headers)[cookieName];
+		await storeInterruptPre?.(currentCookie, ttlStore);
+
+		// Process Cookie
 		const cookieState = ttlStore.getItem(currentCookie);
 		if (cookieState) {
 			await callback('cookie', cookieState, ctx);
@@ -181,6 +194,7 @@ export function authMiddleware<S = never>(
 			}
 		}
 
+		await storeInterruptPost?.(currentCookie, ttlStore);
 		return res;
 	});
 }
